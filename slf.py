@@ -5,7 +5,7 @@ import joblib
 import os
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
-
+#Y29kZSBieSBqZWpvIAo=
 # Load or train ML model
 MODEL_FILE = "firewall_ml_model.pkl"
 
@@ -35,7 +35,7 @@ def train_or_load_model():
     print("[+] Model Training Complete.")
     
     return model
-
+#Y29kZSBieSBqZWpvIAo=
 # Capture packets and extract features
 def capture_packets(packet_count=100):
     print("[+] Capturing Network Packets...")
@@ -53,7 +53,7 @@ def capture_packets(packet_count=100):
 
     df = pd.DataFrame(extracted_data, columns=['Length', 'Protocol'])
     return df, ip_sources
-
+#Y29kZSBieSBqZWpvIAo=
 # Detect anomalies using ML model
 def detect_anomalies(model, df):
     print("[+] Detecting Anomalies...")
@@ -66,7 +66,7 @@ def detect_anomalies(model, df):
 def block_ip(ip):
     print(f"[!] Blocking Malicious IP: {ip}")
     os.system(f"sudo iptables -A INPUT -s {ip} -j DROP")
-
+#Y29kZSBieSBqZWpvIAo=
 # Main function
 def main():
     model = train_or_load_model()
@@ -82,4 +82,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#Y29kZSBieSBqZWpvIAo=
 
