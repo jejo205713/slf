@@ -6,7 +6,7 @@ import pandas as pd
 import joblib
 import time
 import requests
-
+#Y29kZSBieSBqZWpvIAo=
 # Load or initialize machine learning model
 MODEL_PATH = "slf/firewall_model.pkl"
 DATABASE_PATH = "slf/threats.db"
@@ -81,7 +81,7 @@ def update_firewall():
     for ip in blocked_ips:
         os.system(f"sudo iptables -A INPUT -s {ip} -j DROP")
         print(f"[+] Blocked IP: {ip}")
-
+#Y29kZSBieSBqZWpvIAo=
 # Fetch and apply threat intelligence feeds
 def threat_intelligence():
     print("[+] Fetching Threat Intelligence Feeds...")
@@ -123,3 +123,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+#Y29kZSBieSBqZWpvIAo=
