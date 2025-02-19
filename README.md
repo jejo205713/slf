@@ -17,3 +17,6 @@ myenv\Scripts\activate
 pip install scapy joblib numpy pandas scikit-learn tensorflow
 pip install flask requests matplotlib netifaces psutil
 ```
+```bash
+sudo setcap cap_net_raw,cap_net_admin=eip $(which python3)
+```
