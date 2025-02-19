@@ -1,26 +1,16 @@
-
 #!/bin/bash
 
-echo "[+] Updating system and installing required packages..."
+echo "Updating package lists..."
 sudo yum update -y
-sudo yum install -y python3 python3-pip
 
-echo "[+] Creating virtual environment..."
-python3 -m venv myenv
+echo "Installing Python and required development tools..."
+sudo yum install -y python3 python3-devel python3-pip
 
-echo "[+] Activating virtual environment..."
-source myenv/bin/activate
+echo "Installing dependencies..."
+pip3 install --upgrade pip
+pip3 install scapy joblib numpy pandas scikit-learn tensorflow flask requests matplotlib netifaces psutil
 
-echo "[+] Upgrading pip..."
-pip install --upgrade pip
+echo "Checking installation..."
+python3 -c "import scapy; import joblib; import numpy; import pandas; import sklearn; import tensorflow; import flask; import requests; import matplotlib; import netifaces; import psutil; print('✅ All dependencies installed successfully!')"
 
-echo "[+] Installing required dependencies..."
-pip install scapy joblib numpy pandas scikit-learn tensorflow flask requests matplotlib netifaces psutil
-
-echo "[+] Setting raw socket permissions for Python (required for Scapy)..."
-sudo setcap cap_net_raw,cap_net_admin=eip $(which python3)
-
-echo "[+] Verifying installation..."
-python3 -c "import scapy; import joblib; import sklearn; import flask; print('All dependencies installed successfully')"
-
-echo "[+] Setup complete! Use 'source myenv/bin/activate' to activate the virtual environment."
+echo "Installation complete."
