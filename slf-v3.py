@@ -1,87 +1,67 @@
-import scapy.all as scapy
-import pandas as pd
 import joblib
+import pandas as pd
+from scapy.all import sniff
 import os
-import netifaces as ni
-import psutil
-from flask import Flask, request
 
 # Load AI Model
-try:
-    model = joblib.load("ai_firewall_model.pkl")
-    print("\u2714 AI Model Loaded Successfully!")
-except Exception as e:
-    print("\u274C Error Loading AI Model:", e)
+model_path = "ai_firewall_model.pkl"
+
+if os.path.exists(model_path):
+    model = joblib.load(model_path)
+    print("✅ AI Model Loaded Successfully!")
+    
+    # Step 3: Verify model feature names
+    if hasattr(model, "feature_names_in_"):
+        print("🔍 Model expected features:", model.feature_names_in_)
+    else:
+        print("⚠️ Model has no feature_names_in_ attribute!")
+else:
+    print("❌ AI Model Not Found!")
     model = None
 
-# Global DataFrame for Firewall Logs
-firewall_logs = pd.DataFrame(columns=["IP", "Port", "Action"])
-
-def update_firewall_rules(ip, port, decision):
-    """Updates firewall logs dynamically."""
-    global firewall_logs
-    new_entry = pd.DataFrame({"IP": [ip], "Port": [port], "Action": [decision]})
-    firewall_logs = pd.concat([firewall_logs, new_entry], ignore_index=True)
-
+# AI Prediction Function (Step 2 Included)
 def ai_detect_anomaly(ip, port):
     """Predicts if an IP is malicious using AI."""
     if model is None:
         return False  # No model loaded
 
     try:
-        # Encode categorical features
+        # Encode IP as categorical value
         encoded_ip = pd.Series([ip]).astype("category").cat.codes[0]
         new_traffic = pd.DataFrame({"IP": [encoded_ip], "Port": [port], "Bytes_Transferred": [5000]})
 
-        # Ensure model features match expected format
-        required_features = model.feature_names_in_
-        for col in required_features:
-            if col not in new_traffic.columns:
-                new_traffic[col] = 0  # Default missing columns to 0
-        
-        prediction = model.predict(new_traffic[required_features])
+        # Ensure model feature order is correct
+        if hasattr(model, "feature_names_in_"):
+            required_features = model.feature_names_in_
+        else:
+            required_features = new_traffic.columns  # Default to input DataFrame columns
+
+        # Match feature order
+        new_traffic = new_traffic.reindex(columns=required_features, fill_value=0)
+
+        prediction = model.predict(new_traffic)
         return prediction[0] == 1  # Return True if it's an attack
 
     except Exception as e:
         print("\u274C AI Prediction Error:", e)
         return False
 
-def block_ip(ip):
-    """Blocks an IP using iptables (avoids duplicate rules)."""
-    existing_rules = os.popen("sudo iptables -L INPUT -v -n").read()
-    if ip not in existing_rules:  # Avoid redundant blocks
-        os.system(f"sudo iptables -A INPUT -s {ip} -j DROP")
-        print(f"\u26D4 Blocked IP: {ip}")
-    else:
-        print(f"\u26A0 IP {ip} is already blocked!")
-
-def firewall_engine(packet):
-    """Processes packets to detect and mitigate threats."""
+# Function to process packets
+def process_packet(packet):
     try:
-        if packet.haslayer(scapy.IP):
-            ip = packet[scapy.IP].src
-            port = packet[scapy.TCP].sport if packet.haslayer(scapy.TCP) else "Unknown"
+        src_ip = packet[0][1].src
+        dst_port = packet[0][2].dport if packet.haslayer("TCP") or packet.haslayer("UDP") else None
 
-            if ai_detect_anomaly(ip, port):
-                block_ip(ip)
-                update_firewall_rules(ip, port, "Blocked")
-            else:
-                update_firewall_rules(ip, port, "Allowed")
+        if dst_port:
+            is_attack = ai_detect_anomaly(src_ip, dst_port)
+            if is_attack:
+                print(f"🚨 DDoS Attack Detected from {src_ip} on port {dst_port}!")
+                # Add mitigation logic here (e.g., block IP)
 
     except Exception as e:
-        print("\u274C Packet Processing Error:", e)
+        print("⚠️ Packet Processing Error:", e)
 
-def capture_packets():
-    """Captures network packets (fixed Scapy socket warnings)."""
-    try:
-        scapy.sniff(prn=firewall_engine, store=False, filter="ip", count=10)
-    except Exception as e:
-        print("\u274C Scapy Sniffing Error:", e)
-
-def start_firewall():
-    """Starts the AI firewall."""
-    print("\U0001F6E1 AI Firewall is now running...")
-    capture_packets()
-
+# Start Packet Sniffing
 if __name__ == "__main__":
-    start_firewall()
+    print("🔥 AI Firewall is now running...")
+    sniff(prn=process_packet, store=0)
