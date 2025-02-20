@@ -32,16 +32,22 @@ def ai_detect_anomaly(ip, port):
     try:
         encoded_ip = pd.Series([ip]).astype("category").cat.codes[0]
         new_traffic = pd.DataFrame({"IP": [encoded_ip], "Port": [port], "Bytes_Transferred": [5000]})
-        
+
         # Ensure AI model expects the correct features
         if hasattr(model, "feature_names_in_"):
             missing_features = set(model.feature_names_in_) - set(new_traffic.columns)
             for feature in missing_features:
                 new_traffic[feature] = 0  # Add missing features with default values
-        
+
+        # Convert all feature data types to match model expectations
+        for feature in new_traffic.columns:
+            try:
+                new_traffic[feature] = pd.to_numeric(new_traffic[feature], errors='coerce')
+            except Exception as e:
+                print(f"\u274C Feature conversion error for {feature}:", e)
+
         prediction = model.predict(new_traffic)
         return prediction[0] == 1  # Return True if it's an attack
-
     except Exception as e:
         print("\u274C AI Prediction Error:", e)
         return False
@@ -54,20 +60,18 @@ def block_ip(ip):
 def firewall_engine(packet):
     """Processes packets to detect and mitigate threats."""
     try:
-        if scapy.IP in packet:  # Ensure packet contains an IP layer
+        if packet.haslayer(scapy.IP):  # Ensure packet contains an IP layer
             ip = packet[scapy.IP].src
-            port = packet[scapy.TCP].sport if packet.haslayer(scapy.TCP) else "Unknown"
+            port = packet[scapy.TCP].sport if packet.haslayer(scapy.TCP) else -1
 
             if ai_detect_anomaly(ip, port):
                 block_ip(ip)
                 update_firewall_rules(ip, port, "Blocked")
             else:
                 update_firewall_rules(ip, port, "Allowed")
-
         else:
             print("\u274C Packet processing error: No IP layer found!")
             packet.show()  # Debugging: Show packet details
-
     except Exception as e:
         print("\u274C Packet processing error:", e)
 
