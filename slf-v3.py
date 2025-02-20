@@ -33,21 +33,29 @@ def ai_detect_anomaly(ip, port):
         return False  # No model loaded
 
     try:
-        encoded_ip = pd.Series([ip]).astype("category").cat.codes[0]
+        encoded_ip = pd.Series([ip]).astype("category").cat.codes[0]  # Encode categorical IP
         new_traffic = pd.DataFrame({"IP": [encoded_ip], "Port": [port], "Bytes_Transferred": [5000]})
 
-        # Ensure the input matches the model's expected features
+        # Ensure the input DataFrame is aligned with the model's features
         for feature in model_features:
             if feature not in new_traffic.columns:
                 new_traffic[feature] = 0  # Add missing features with default values
 
-        new_traffic = new_traffic[list(model_features)]  # Align feature order
+        # Reorder DataFrame to match model's expected feature order
+        new_traffic = new_traffic[list(model_features)]
+
+        # **Fix: Validate if DataFrame is not empty before prediction**
+        if new_traffic.empty or new_traffic.isnull().values.any():
+            print("\u274C AI Prediction Error: Invalid DataFrame for prediction.")
+            return False
+
         prediction = model.predict(new_traffic)
         return prediction[0] == 1  # Return True if it's an attack
 
     except Exception as e:
         print("\u274C AI Prediction Error:", e)
         return False
+
 
 def block_ip(ip):
     """Blocks an IP using iptables."""
